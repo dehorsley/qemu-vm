@@ -1,2 +1,3 @@
-debian-9.2.1-amd64-netinst.iso
+debian-*-netinst.iso
 disk.qcow2
+server.log

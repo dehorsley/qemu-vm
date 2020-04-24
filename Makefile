@@ -1,5 +1,21 @@
 # Copyright (C) 2017 Luca Filipozzi <luca.filipozzi@gmail.com>
 # Released subject to the terms of the Mozilla Public License.
+#
+VERSION = 9.12.0
+ARCH = amd64
+#ARCH=i386
+
+QEMU_SYSTEM = qemu-system-x86_64
+
+ifeq ($(ARCH),amd64)
+INSTALL_PATH = install.amd
+else ifeq ($(ARCH),i386)
+INSTALL_PATH = install.386
+# QEMU_SYSTEM = qemu-system-i386
+endif
+
+
+SHELL = /bin/bash
 
 bootargs  = auto
 bootargs += console-keymaps-at/keymap=us
@@ -13,7 +29,7 @@ bootargs += keyboard-configuration/xkb-keymap=us
 bootargs += locale=en_US
 bootargs += netcfg/get_domain=debian.local
 bootargs += netcfg/get_hostname=vm
-bootargs += preseed/url=http://10.0.2.10:8080/preseed.cfg
+bootargs += preseed/url=http://10.0.2.2:8000/preseed.cfg
 
 .PHONY: default
 default: build
@@ -27,16 +43,20 @@ clean:
 
 .PHONY: distclean
 distclean: clean
-	rm -f debian-9.2.1-amd64-netinst.iso
+	rm -f debian-$(VERSION)-amd64-netinst.iso
 
 disk.qcow2: disk.img kernel initrd netinst.iso
-	qemu-system-x86_64 -enable-kvm -m size=1G -smp cpus=2 -display curses \
+	python3 -m http.server &>> server.log & \
+		echo $$! > server.pid && sleep 1
+	$(QEMU_SYSTEM) -enable-kvm -m size=1G -smp cpus=2 -display curses \
 	  -drive if=virtio,file=disk.img,format=raw,index=0,cache=unsafe \
+	  -enable-kvm -accel hvf -cpu host \
 	  -cdrom netinst.iso -boot d -no-reboot \
-	  -net nic,name=eth0,model=virtio \
-	  -net user,name=eth0,guestfwd=tcp:10.0.2.10:8080-cmd:"busybox httpd -i" \
+	  -nic user,id=eth0 \
 	  -kernel kernel -initrd initrd -append "${bootargs}"
 	qemu-img convert -f raw -O qcow2 disk.img disk.qcow2
+	kill $$(cat server.pid)
+	rm server.pid
 
 .INTERMEDIATE: disk.img
 disk.img:
@@ -44,17 +64,17 @@ disk.img:
 
 .INTERMEDIATE: kernel
 kernel: netinst.iso
-	isoinfo -R -J -i netinst.iso -x /install.amd/vmlinuz > $@
+	isoinfo -R -J -i netinst.iso -x /$(INSTALL_PATH)/vmlinuz > $@
 
 .INTERMEDIATE: initrd
 initrd: netinst.iso
-	isoinfo -R -J -i netinst.iso -x /install.amd/initrd.gz > $@
+	isoinfo -R -J -i netinst.iso -x /$(INSTALL_PATH)/initrd.gz > $@
 
 .INTERMEDIATE: netinst.iso
-netinst.iso: debian-9.2.1-amd64-netinst.iso
+netinst.iso: debian-$(VERSION)-$(ARCH)-netinst.iso
 	ln -sf $^ $@
 
-.PRECIOUS: debian-9.2.1-amd64-netinst.iso
-debian-9.2.1-amd64-netinst.iso:
-	wget -c -N https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-9.2.1-amd64-netinst.iso
+.PRECIOUS: debian-$(VERSION)-$(ARCH)-netinst.iso
+debian-$(VERSION)-$(ARCH)-netinst.iso:
+	wget -c -N https://cdimage.debian.org/cdimage/archive/$(VERSION)/$(ARCH)/iso-cd/debian-$(VERSION)-$(ARCH)-netinst.iso
 
