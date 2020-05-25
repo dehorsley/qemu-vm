@@ -1,14 +1,16 @@
 # Copyright (C) 2017 Luca Filipozzi <luca.filipozzi@gmail.com>
 # Released subject to the terms of the Mozilla Public License.
 #
-VERSION = 9.12.0
-ARCH = amd64
-#ARCH=i386
+VERSION = 7.11.0
+# VERSION = 9.12.0
+#ARCH = amd64
+ARCH=i386
 
 QEMU_SYSTEM = qemu-system-x86_64
 
 ifeq ($(ARCH),amd64)
 INSTALL_PATH = install.amd
+# QEMU_SYSTEM = qemu-system-x86_64
 else ifeq ($(ARCH),i386)
 INSTALL_PATH = install.386
 # QEMU_SYSTEM = qemu-system-i386
@@ -45,12 +47,14 @@ clean:
 distclean: clean
 	rm -f debian-$(VERSION)-amd64-netinst.iso
 
+.ONESHELL:
 disk.qcow2: disk.img kernel initrd netinst.iso
-	python3 -m http.server &>> server.log & \
-		echo $$! > server.pid && sleep 1
-	$(QEMU_SYSTEM) -enable-kvm -m size=1G -smp cpus=2 -display curses \
+	python3 -m http.server &> server.log & \
+		echo $$! > server.pid && \
+		sleep 1
+	$(QEMU_SYSTEM) -m size=1G -smp cpus=2 -display curses \
 	  -drive if=virtio,file=disk.img,format=raw,index=0,cache=unsafe \
-	  -enable-kvm -accel hvf -cpu host \
+	  -accel hvf -cpu host \
 	  -cdrom netinst.iso -boot d -no-reboot \
 	  -nic user,id=eth0 \
 	  -kernel kernel -initrd initrd -append "${bootargs}"

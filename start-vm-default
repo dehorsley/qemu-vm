@@ -2,7 +2,7 @@
 # Copyright (C) 2017 Luca Filipozzi <luca.filipozzi@gmail.com>
 # Released subject to the terms of the Mozilla Public License.
 
-qemu-system-x86_64  -enable-kvm -accel hvf -cpu host  -smp cpus=8 -m size=1G\
+qemu-system-x86_64  -accel hvf -cpu host  -smp cpus=8 -m size=1G\
   -drive if=virtio,file=disk.qcow2,format=qcow2,index=0,media=disk \
   -nic user,id=eth0 \
   -netdev user,id=eth0,hostfwd=:127.0.0.1:2223-:22
